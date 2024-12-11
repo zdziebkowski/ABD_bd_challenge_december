@@ -54,3 +54,44 @@ def fetch_historical_weather(
     response = requests.get(url, params=params, timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+def get_city_historical_weather(
+        city_name: str,
+        start_date: str,
+        end_date: str
+) -> Dict[str, Any]:
+    """
+    Retrieve historical weather for a specific city by name.
+
+    :param city_name: Name of the city to fetch weather for.
+    :param start_date: Start date for historical data.
+    :param end_date: End date for historical data.
+    :return: Dictionary with historical weather data for the city.
+    """
+    return fetch_historical_weather(
+        city_name=city_name,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+
+def fetch_historical_weather_for_all_cities(
+        start_date: str,
+        end_date: str
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch historical weather data for all cities in the CITIES dictionary.
+
+    :param start_date: Start date for historical data.
+    :param end_date: End date for historical data.
+    :return: Dictionary with city names as keys and their historical weather data as values.
+    """
+    return {
+        city: fetch_historical_weather(
+            city_name=city,
+            start_date=start_date,
+            end_date=end_date
+        )
+        for city in CITIES.keys()
+    }

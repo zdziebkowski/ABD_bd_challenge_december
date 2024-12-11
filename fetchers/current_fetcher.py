@@ -14,14 +14,14 @@ def get_city_coordinates(city_name: str) -> tuple[float, float]:
 
 
 def fetch_current_weather(
-        latitude: Optional[float],
-        longitude: Optional[float],
-        city_name: Optional[str]) -> Dict[str, Any]:
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        city_name: Optional[str] = None) -> Dict[str, Any]:
     """
     Fetch current weather data from Open-Meteo API.
     The function can be called by specifying either:
     - latitude and longitude directly, or
-    - a city_name present in the config.CITIES dictionary.
+    - a city_name present in the config. CITIES dictionary.
 
     :param latitude: Latitude of the desired location (if city_name not provided).
     :param longitude: Longitude of the desired location (if city_name not provided).
@@ -45,3 +45,25 @@ def fetch_current_weather(
     response = requests.get(url, params=params, timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+def get_city_weather(city_name: str) -> Dict[str, Any]:
+    """
+    Retrieve weather for a specific city by name.
+
+    :param city_name: Name of the city to fetch weather for.
+    :return: Dictionary with current weather data for the city.
+    """
+    return fetch_current_weather(city_name=city_name)
+
+
+def fetch_weather_for_all_cities() -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch current weather data for all cities in the CITIES dictionary.
+
+    :return: Dictionary with city names as keys and their weather data as values.
+    """
+    return {
+        city: fetch_current_weather(city_name=city)
+        for city in CITIES.keys()
+    }
