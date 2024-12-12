@@ -1,8 +1,9 @@
 from typing import Dict, Any, Optional
 import typer
+import requests
 from fetchers.current_fetcher import fetch_current_weather, fetch_weather_for_all_cities
 from fetchers.historical_fetcher import fetch_historical_weather, fetch_historical_weather_for_all_cities
-from utils.file_manager import save_data_to_file
+from utils.file_manager import save_data_to_file, save_city_weather_data
 
 app = typer.Typer()
 
@@ -84,18 +85,18 @@ def fetch_historical(
 
 @app.command()
 def fetch_current_all(
-        output: str = typer.Option(
-            "data/all_current_weather.json",
-            help="Output file path for all cities' current weather data."
+        output_dir: str = typer.Option(
+            "data", help="Directory for saving weather data files."
         )
 ) -> None:
     """
-    Fetch current weather data for all cities in the configuration and save to a JSON file.
+    Fetch current weather data for all cities in the configuration and save to separate JSON files.
     """
     try:
-        all_current_weather: Dict[str, Dict[str, Any]] = fetch_weather_for_all_cities()
-        save_data_to_file(all_current_weather, output)
-        typer.echo(f"Current weather for all cities saved successfully to {output}.")
+        all_current_weather = fetch_weather_for_all_cities()
+        for city, weather_data in all_current_weather.items():
+            file_path = save_city_weather_data(city, weather_data, output_dir)
+            typer.echo(f"Current weather for {city} saved successfully to {file_path}")
     except (ValueError, KeyError, requests.HTTPError) as e:
         typer.echo(f"Error fetching current weather for all cities: {e}", err=True)
 
@@ -108,21 +109,25 @@ def fetch_historical_all(
         end_date: str = typer.Option(
             ..., help="End date for historical data in YYYY-MM-DD format."
         ),
-        output: str = typer.Option(
-            "data/all_historical_weather.json",
-            help="Output file path for all cities' historical weather data."
+        output_dir: str = typer.Option(
+            "data", help="Directory for saving weather data files."
         )
 ) -> None:
     """
-    Fetch historical weather data for all cities in the configuration and save to a JSON file.
+    Fetch historical weather data for all cities in the configuration and save to separate JSON files.
     """
     try:
-        all_historical_weather: Dict[str, Dict[str, Any]] = fetch_historical_weather_for_all_cities(
+        all_historical_weather = fetch_historical_weather_for_all_cities(
             start_date=start_date,
             end_date=end_date
         )
-        save_data_to_file(all_historical_weather, output)
-        typer.echo(f"Historical weather for all cities from {start_date} to {end_date} saved successfully to {output}.")
+        for city, weather_data in all_historical_weather.items():
+            file_path = save_city_weather_data(
+                city,
+                weather_data,
+                output_dir
+            )
+            typer.echo(f"Historical weather for {city} from {start_date} to {end_date} saved to {file_path}")
     except (ValueError, KeyError, requests.HTTPError) as e:
         typer.echo(f"Error fetching historical weather for all cities: {e}", err=True)
 
