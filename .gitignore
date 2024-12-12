@@ -1,1 +1,14 @@
+# PyCharm
+.idea/
+
+# Python cache files
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files
+data/
+
+# Virtual environment
 venv/
