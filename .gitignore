@@ -1,14 +1,33 @@
-# PyCharm
-.idea/
+# Virtual Environment
+venv/
 
 # Python cache files
-**pycache**/
-*.pyc
-*.pyo
-*.pyd
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Data files
-data/
+# Project specific
+weather_fetcher/logs/*
+!weather_fetcher/logs/.gitkeep
+weather_fetcher/data/*
+!weather_fetcher/data/.gitkeep
+!weather_fetcher/data/current/.gitkeep
+!weather_fetcher/data/historical/.gitkeep
 
-# Virtual environment
-venv/
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# System files
+.DS_Store
+Thumbs.db
