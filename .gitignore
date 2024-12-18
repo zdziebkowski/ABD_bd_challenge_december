@@ -1,5 +1,6 @@
 # Virtual Environment
 venv/
+/venv_spark/
 
 # Python cache files
 __pycache__/
