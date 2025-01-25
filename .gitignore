@@ -33,3 +33,5 @@ build/
 .DS_Store
 Thumbs.db
 /weather_fetcher/parquet/
+/weather_fetcher/db_config.py
+/weather_fetcher/lib/
