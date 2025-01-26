@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from datetime import datetime
 from pyspark.sql import SparkSession
 import psycopg2
@@ -42,8 +43,55 @@ def create_database():
     conn.close()
 
 
+def cleanup_old_backups(keep_latest=5):
+    """Keep only specified number of most recent backups"""
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+
+    # Get all backup tables
+    cur.execute("""
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name LIKE '%_backup_%'
+        ORDER BY table_name DESC
+    """)
+
+    backup_tables = {}
+    for (table_name,) in cur.fetchall():
+        base_name = table_name.split('_backup_')[0]
+        if base_name not in backup_tables:
+            backup_tables[base_name] = []
+        backup_tables[base_name].append(table_name)
+
+    # Drop old backups
+    for base_name, backups in backup_tables.items():
+        if len(backups) > keep_latest:
+            for old_backup in sorted(backups)[:-keep_latest]:
+                cur.execute(f"DROP TABLE IF EXISTS {old_backup}")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def backup_tables():
+    """Create backup of existing tables before update"""
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    tables = ['temperature_rankings', 'wind_analysis', 'day_night_patterns', 'weather_codes']
+    for table in tables:
+        backup_table = f"{table}_backup_{timestamp}"
+        cur.execute(f"CREATE TABLE IF NOT EXISTS {backup_table} AS SELECT * FROM {table}")
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 def create_tables():
-    """Create tables for weather data"""
+    """Create tables for weather data with version tracking"""
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
 
@@ -105,27 +153,89 @@ def create_spark_session():
             .getOrCreate())
 
 
-def load_data_to_postgres(spark, parquet_dir):
-    """Load Parquet data into PostgreSQL tables"""
+def load_data_to_postgres_batch(spark, parquet_dir, batch_size=10000):
+    """Load Parquet data into PostgreSQL using batching with progress tracking"""
+    logger = logging.getLogger(__name__)
     jdbc_url = f"jdbc:postgresql://{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
 
     # Properties for PostgreSQL connection
     properties = {
         "user": DB_CONFIG['user'],
         "password": DB_CONFIG['password'],
-        "driver": "org.postgresql.Driver"
+        "driver": "org.postgresql.Driver",
+        "batchsize": str(batch_size)
     }
 
-    # Load and write each dataset
-    tables = ['temperature_rankings', 'wind_analysis', 'day_night_patterns', 'weather_codes']
+    for table in ['temperature_rankings', 'wind_analysis', 'day_night_patterns', 'weather_codes']:
+        logger.info(f"Processing table: {table}")
 
-    for table in tables:
+        # Read Parquet
         df = spark.read.parquet(f"{parquet_dir}/{table}")
+        total_rows = df.count()
+        num_partitions = (total_rows + batch_size - 1) // batch_size
 
-        # Write to PostgreSQL
-        df.write \
-            .mode("overwrite") \
-            .jdbc(jdbc_url, table, properties=properties)
+        logger.info(f"Total rows: {total_rows}, Number of batches: {num_partitions}")
+
+        # Process in batches using row_number
+        from pyspark.sql.window import Window
+        from pyspark.sql.functions import row_number
+
+        # Add row numbers for batching
+        window = Window.orderBy("source_city")
+        df_numbered = df.withColumn("row_num", row_number().over(window))
+
+        # Write with progress tracking
+        try:
+            rows_written = 0
+            for batch_num in range(num_partitions):
+                start_row = batch_num * batch_size + 1
+                end_row = (batch_num + 1) * batch_size
+
+                batch_df = df_numbered.filter(
+                    (df_numbered.row_num >= start_row) &
+                    (df_numbered.row_num <= end_row)
+                ).drop("row_num")
+
+                batch_count = batch_df.count()
+
+                batch_df.write \
+                    .mode("append" if batch_num > 0 else "overwrite") \
+                    .jdbc(jdbc_url, table, properties=properties)
+
+                rows_written += batch_count
+                progress = (rows_written / total_rows) * 100
+                logger.info(f"Progress for {table}: {progress:.2f}% ({rows_written}/{total_rows} rows)")
+
+        except Exception as e:
+            logger.error(f"Error processing batch {batch_num} for table {table}: {str(e)}")
+            raise
+
+        logger.info(f"Completed loading table: {table}")
+
+
+def load_with_retry(func, max_retries=3):
+    """Decorator for retry logic"""
+
+    def wrapper(*args, **kwargs):
+        logger = logging.getLogger(__name__)
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"Failed after {max_retries} attempts")
+                    raise
+                wait_time = 2 ** attempt
+                logger.warning(f"Attempt {attempt + 1} failed. Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+
+    return wrapper
+
+
+@load_with_retry
+def load_data(spark, parquet_dir):
+    """Load data with retry mechanism"""
+    load_data_to_postgres_batch(spark, parquet_dir)
 
 
 def main():
@@ -136,6 +246,10 @@ def main():
     logger.info("Starting PostgreSQL setup and data loading process")
 
     try:
+        # Backup existing tables
+        logger.info("Creating backup of existing tables")
+        backup_tables()
+
         # Setup database and tables
         logger.info("Creating database and tables")
         create_database()
@@ -149,7 +263,7 @@ def main():
         parquet_dir = os.path.join(current_dir, "analysis_results")
 
         logger.info("Loading data to PostgreSQL")
-        load_data_to_postgres(spark, parquet_dir)
+        load_data(spark, parquet_dir)
 
         logger.info("Data loading completed successfully")
 
