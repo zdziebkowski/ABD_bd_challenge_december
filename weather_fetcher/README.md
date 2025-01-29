@@ -1,35 +1,161 @@
-# Weather Data Retrieval Application
+# Weather Data Pipeline Project
 
-Welcome to the **Big Data December Challenge**! This repository contains a project developed as part of the challenge to build and refine data engineering skills. 🚀❄️
-
-## Project Overview
-
-This application is designed to fetch weather data from an external API and store it on disk for further analysis. It focuses on building foundational skills in data extraction (ETL pipelines) and handling raw data, with an emphasis on reusability and scalability.
-
-## Features
-
-- **Fetch Weather Data**: Retrieves weather data for specified cities and dates.
-- **Parameterization**: Flexible configuration to fetch data for various cities or time periods.
-- **Historical Data Support**: Potential to extend functionality to include past weather data.
-- **Storage Options**: Save retrieved data locally or optionally to cloud-based storage solutions like AWS S3, Azure Blob Storage, or HDFS.
+## Overview
+This project implements a complete ETL (Extract, Transform, Load) pipeline for weather data processing. It fetches weather data from the Open-Meteo API for multiple cities, processes it through various stages, and ultimately presents it in a format suitable for analysis and visualization.
 
 ## Tools and Technologies
 
-- **Programming Languages**: Python
-- **Libraries**: Requests (or equivalent for HTTP interactions)
-- **Version Control**: Git
+Core Technologies:
+- Python - Main programming language
+- Apache Spark - Big data processing engine
+- PostgreSQL - Relational database for data storage
 
-## Learning Objectives
+Python Libraries:
+- PySpark - Python API for Apache Spark
+- Requests - For API calls to Open-Meteo
+- Typer - CLI interface creation
+- Logging - Built-in logging functionality
+- psycopg2 - PostgreSQL adapter for Python
 
-- Familiarization with weather APIs and external data sources.
-- Building foundational skills for ETL pipelines (Extract phase).
-- Practicing data engineering workflows for real-world applications.
-- Developing reusable, parameterized scripts to streamline data retrieval.
+Data Formats:
+- JSON - Raw data storage
+- Parquet - Optimized columnar storage
 
-## Contribution
+APIs:
+- Open-Meteo API - Weather data source
 
-Feel free to share your solutions and approaches to this challenge! Collaboration and code reviews are encouraged to maximize learning and skill-building. 
+Development Tools:
+- Git - Version control
+- Virtual Environment - Python environment management
 
-Let’s have fun, improve our skills, and share the experience!
+Monitoring & Logging:
+- Custom logging system with file and console outputs
+- Error tracking and retry mechanisms
 
-Happy coding!
+## Project Structure
+```
+weather_data_pipeline/
+├── weather_fetcher/
+│   ├── fetchers/
+│   │   ├── current_fetcher.py
+│   │   └── historical_fetcher.py
+│   ├── utils/
+│   │   └── file_manager.py
+│   ├── config.py
+│   └── main.py
+├── json_to_parquet.py
+├── transform_data.py
+├── postgres_setup.py
+└── db_config.py
+```
+
+## Features
+
+### 1. Data Extraction (E)
+- Fetches current and historical weather data from Open-Meteo API
+- Supports multiple cities (26 cities configured)
+- Handles both current weather and historical data retrieval
+- Includes robust error handling and logging
+- CLI interface for easy data fetching
+
+### 2. Data Transformation (T)
+- Converts JSON files to Parquet format
+- Processes raw weather data into analytical insights:
+  - Temperature rankings across cities
+  - Wind analysis and patterns
+  - Day/night weather patterns
+  - Weather code frequency analysis
+- Implements data cleaning and standardization
+- Uses Apache Spark for efficient data processing
+
+### 3. Data Loading (L)
+- Loads processed data into PostgreSQL database
+- Creates optimized table schemas
+- Implements batch processing for large datasets
+- Includes automatic backup management
+- Handles data versioning and updates
+
+### 4. Analysis Features
+- Temperature analysis by city
+- Wind patterns and speed analysis
+- Day/night weather comparison
+- Weather code frequency analysis
+- Custom metrics and aggregations
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+```
+
+2. Install required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Configure PostgreSQL:
+- Update db_config.py with your database credentials
+- Ensure PostgreSQL is installed and running
+
+## Usage
+
+### Fetching Weather Data
+```bash
+# Fetch current weather for all cities
+python -m weather_fetcher.main fetch-current-all --output-dir "data/current"
+
+# Fetch historical weather data
+python -m weather_fetcher.main fetch-historical --city "Warsaw" --start-date "2024-01-01" --end-date "2024-01-31"
+```
+
+### Processing Data
+```bash
+# Convert JSON to Parquet
+python json_to_parquet.py
+
+# Transform data
+python transform_data.py
+
+# Load data to PostgreSQL
+python postgres_setup.py
+```
+
+## Configuration
+
+### Cities
+The project includes 26 predefined cities with their coordinates in `config.py`. Cities include:
+- Major Polish cities (Warsaw, Krakow, etc.)
+- Selected European locations
+- Custom locations can be added to the configuration
+
+### Database
+Default database configuration in `db_config.py`:
+- Database name: weather_db
+- Default port: 5432
+- Configurable user credentials
+
+## Data Flow
+1. Raw weather data is fetched from the API (JSON format)
+2. Data is converted to Parquet format for efficient processing
+3. Spark transformations create analytical datasets
+4. Results are stored in PostgreSQL for analysis
+5. Data can be visualized using BI tools
+
+## Error Handling and Logging
+- Comprehensive logging system
+- Automatic retry mechanism for API calls
+- Database operation monitoring
+- Backup management for data safety
+
+## Future Enhancements
+- Additional weather metrics analysis
+- Advanced visualization capabilities
+- Advanced analytics features
+
+## Contributing
+Contributions are welcome! Please feel free to submit pull requests.
+
+## Acknowledgments
+- Weather data provided by Open-Meteo API
+- Project developed as part of the Big Data December Challenge
