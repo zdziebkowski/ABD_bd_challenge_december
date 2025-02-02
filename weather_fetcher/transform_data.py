@@ -1,12 +1,17 @@
 import os
+import sys
 import logging
 from datetime import datetime
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import *
+from pyspark.sql.window import Window
+from pyspark.sql.types import StringType
 
 
-def setup_logging(logs_dir):
-    """Set up logging configuration for both file and console output.
+
+def setup_logging(logs_dir: str) -> logging.Logger:
+    """
+    Set up logging configuration for both file and console output.
 
     Args:
         logs_dir (str): Directory path where log files will be stored
@@ -16,6 +21,7 @@ def setup_logging(logs_dir):
     """
     os.makedirs(logs_dir, exist_ok=True)
     log_file = os.path.join(logs_dir, f"data_transform_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -27,22 +33,26 @@ def setup_logging(logs_dir):
     return logging.getLogger(__name__)
 
 
-def create_spark_session():
-    """Create and configure a Spark session for data processing.
+def create_spark_session() -> SparkSession:
+    """
+    Create and configure a Spark session for data processing.
 
     Returns:
         SparkSession: Configured Spark session
     """
     logger = logging.getLogger(__name__)
     logger.info("Creating Spark session")
-    return (SparkSession.builder
-            .appName("Weather_Data_Analysis")
-            .config("spark.sql.parquet.compression.codec", "snappy")
-            .getOrCreate())
+    return (
+        SparkSession.builder
+        .master("local[*]")
+        .appName("Weather_Data_Analysis")
+        .getOrCreate()
+    )
 
 
-def read_parquet_data(spark, input_dir) -> DataFrame:
-    """Read Parquet files from specified directory.
+def read_parquet_data(spark: SparkSession, input_dir: str) -> DataFrame:
+    """
+    Read Parquet files from specified directory.
 
     Args:
         spark (SparkSession): Active Spark session
@@ -53,11 +63,14 @@ def read_parquet_data(spark, input_dir) -> DataFrame:
     """
     logger = logging.getLogger(__name__)
     logger.info(f"Reading Parquet data from {input_dir}")
-    return spark.read.parquet(input_dir)
+    df = spark.read.parquet(input_dir)
+    logger.info(f"DataFrame loaded successfully")
+    return df
 
 
 def clean_city_names(df: DataFrame) -> DataFrame:
-    """Clean city names by replacing %20 with spaces.
+    """
+    Clean city names by replacing '%20' with spaces.
 
     Args:
         df (DataFrame): Input DataFrame with weather data
@@ -66,91 +79,113 @@ def clean_city_names(df: DataFrame) -> DataFrame:
         DataFrame: DataFrame with cleaned city names
     """
     logger = logging.getLogger(__name__)
-    logger.info("Cleaning city names")
-    return df.withColumn("source_city",
-                         regexp_replace("source_city", "%20", " "))
+    logger.info("Cleaning city names (replacing '%20' with ' ')")
+    return df.withColumn("source_city", regexp_replace("source_city", "%20", " "))
 
 
-def analyze_temperatures(df) -> DataFrame:
-    """Calculate temperature statistics grouped by city.
+def ranking_temperature(df: DataFrame) -> DataFrame:
+    """
+    Calculate average temperature per city and return ranking from highest to lowest.
 
     Args:
-        df (DataFrame): Input DataFrame with weather data
-
+        df (DataFrame): Input DataFrame with weather data (columns: source_city, temperature)
     Returns:
-        DataFrame: Temperature analysis results
+        DataFrame: Ranking of cities by avg_temp descending
     """
     logger = logging.getLogger(__name__)
-    logger.info("Analyzing temperature data")
-    return df.groupBy("source_city").agg(
-        round(avg("temperature"), 2).alias("avg_temp"),
-        round(max("temperature"), 2).alias("max_temp"),
-        round(min("temperature"), 2).alias("min_temp")
-    ).orderBy(desc("avg_temp"))
+    logger.info("Calculating ranking of cities by average temperature.")
+
+    # Group by city and compute avg temperature
+    grouped_df = df.groupBy("source_city").agg(
+        round(avg("temperature"), 2).alias("avg_temp")
+    )
+
+    # Sort descending
+    ranked_df = grouped_df.orderBy(desc("avg_temp"))
+
+    logger.info(f"Ranking temperature: computed for {ranked_df.count()} cities.")
+    return ranked_df
 
 
-def analyze_wind(df) -> DataFrame:
-    """Calculate wind statistics grouped by city.
+def top_weather_code(df: DataFrame) -> DataFrame:
+    """
+    Find the most frequent weather code for each city, with a text description.
 
     Args:
-        df (DataFrame): Input DataFrame with weather data
+        df (DataFrame): Input DataFrame with columns (source_city, weathercode)
 
     Returns:
-        DataFrame: Wind analysis results
+        DataFrame: Each row = [source_city, weathercode, freq, weather_description]
+                   showing the top (most frequent) code in that city.
     """
     logger = logging.getLogger(__name__)
-    logger.info("Analyzing wind data")
-    return df.groupBy("source_city").agg(
-        round(avg("windspeed"), 2).alias("avg_windspeed"),
-        round(max("windspeed"), 2).alias("max_windspeed"),
-        expr("percentile_approx(winddirection, 0.5)").alias("median_direction")
-    ).orderBy(desc("avg_windspeed"))
+    logger.info("Calculating top weather code by frequency for each city.")
+
+    # Count occurrences of each (city, code)
+    freq_df = df.groupBy("source_city", "weathercode").agg(
+        count("*").alias("freq")
+    )
+
+    # Rank by frequency within each city
+    window_city = Window.partitionBy("source_city").orderBy(desc("freq"))
+    ranked_df = freq_df.withColumn("rn", row_number().over(window_city))
+
+    # Keep only top 1 row per city
+    top_codes = ranked_df.filter(col("rn") == 1).drop("rn")
+
+    # Add weather description using when/otherwise
+    weather_codes = top_codes.withColumn(
+        "weather_description",
+        when(col("weathercode") == 0, "Clear Sky")
+        .when(col("weathercode") == 1, "Mainly Clear")
+        .when(col("weathercode") == 2, "Partly Cloudy")
+        .when(col("weathercode") == 3, "Overcast")
+        .when(col("weathercode") == 45, "Fog")
+        .when(col("weathercode") == 48, "Depositing rime fog")
+        .when(col("weathercode") == 51, "Drizzle: Light")
+        .when(col("weathercode") == 53, "Drizzle: Moderate")
+        .when(col("weathercode") == 55, "Drizzle: Dense")
+        .otherwise("Unknown")
+    )
+
+    logger.info(f"Top weather codes computed for {weather_codes.count()} cities.")
+    return weather_codes
 
 
-def analyze_day_night(df) -> DataFrame:
-    """Analyze temperature and wind patterns between day and night.
+def map_avg_temp(df: DataFrame) -> DataFrame:
+    """
+    Prepare data for a city map: city + lat/long + average temperature.
 
     Args:
-        df (DataFrame): Input DataFrame with weather data
+        df (DataFrame): Input data with columns (source_city, latitude, longitude, temperature)
 
     Returns:
-        DataFrame: Day/night analysis results
+        DataFrame: [source_city, latitude, longitude, avg_temp]
     """
     logger = logging.getLogger(__name__)
-    logger.info("Analyzing day/night patterns")
-    return df.groupBy("source_city", "is_day").agg(
-        round(avg("temperature"), 2).alias("avg_temp"),
-        round(avg("windspeed"), 2).alias("avg_windspeed")
-    ).orderBy("source_city", "is_day")
+    logger.info("Preparing map data: average temperature with lat/long per city.")
 
+    grouped_df = df.groupBy("source_city", "latitude", "longitude").agg(
+        round(avg("temperature"), 2).alias("avg_temp")
+    )
 
-def analyze_weather_codes(df) -> DataFrame:
-    """Calculate frequency of weather codes by city.
-
-    Args:
-        df (DataFrame): Input DataFrame with weather data
-
-    Returns:
-        DataFrame: Weather code frequency analysis
-    """
-    logger = logging.getLogger(__name__)
-    logger.info("Analyzing weather codes")
-    return df.groupBy("source_city", "weathercode").agg(
-        count("*").alias("frequency")
-    ).orderBy("source_city", desc("frequency"))
+    logger.info(f"Map data prepared for {grouped_df.count()} rows.")
+    return grouped_df
 
 
 def write_dataframes(dfs_dict: dict, output_dir: str):
-    """Write DataFrames to Parquet files.
+    """
+    Write DataFrames to Parquet files.
 
     Args:
-        dfs_dict (dict): Dictionary of DataFrames with their names
+        dfs_dict (dict): Dictionary of { 'df_name': df_object }
         output_dir (str): Output directory for Parquet files
     """
     logger = logging.getLogger(__name__)
     for name, df in dfs_dict.items():
-        logger.info(f"Writing {name} to Parquet")
-        df.write.mode("overwrite").parquet(f"{output_dir}/{name}")
+        path = f"{output_dir}/{name}"
+        logger.info(f"Writing DataFrame '{name}' to Parquet -> {path}")
+        df.write.mode("overwrite").parquet(path)
 
 
 def main():
@@ -162,43 +197,27 @@ def main():
     logger = setup_logging(logs_dir)
     logger.info("Starting weather data transformation process")
 
+    spark = None
     try:
         spark = create_spark_session()
-        parquet_df = read_parquet_data(spark, input_dir)
+
+        df = read_parquet_data(spark, input_dir)
+
+        df = clean_city_names(df)
+
+        temp_rank_df = ranking_temperature(df)
+        top_code_df = top_weather_code(df)
+        map_df = map_avg_temp(df)
+
         os.makedirs(output_dir, exist_ok=True)
-
-        # Clean city names
-        df = clean_city_names(parquet_df)
-
-        # Analyze data
-        temp_df = analyze_temperatures(df)
-        wind_df = analyze_wind(df)
-        day_night_df = analyze_day_night(df)
-        weather_codes_df = analyze_weather_codes(df)
-
-        # Show results
-        print("\nTemperature Rankings:")
-        temp_df.show(truncate=False)
-
-        print("\nWind Analysis:")
-        wind_df.show(truncate=False)
-
-        print("\nDay/Night Patterns:")
-        day_night_df.show(truncate=False)
-
-        print("\nWeather Codes:")
-        weather_codes_df.show(truncate=False)
-
-        # Write results
         dfs_to_write = {
-            "temperature_rankings": temp_df,
-            "wind_analysis": wind_df,
-            "day_night_patterns": day_night_df,
-            "weather_codes": weather_codes_df
+            "ranking_temperature": temp_rank_df,
+            "top_weather_code": top_code_df,
+            "map_avg_temp": map_df
         }
         write_dataframes(dfs_to_write, output_dir)
 
-        logger.info("Transformation process completed successfully")
+        logger.info("Transformation process completed successfully.")
 
     except Exception as e:
         logger.error(f"Transformation process failed: {str(e)}", exc_info=True)

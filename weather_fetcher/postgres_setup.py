@@ -80,7 +80,7 @@ def backup_tables():
     cur = conn.cursor()
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    tables = ['temperature_rankings', 'wind_analysis', 'day_night_patterns', 'weather_codes']
+    tables = ['ranking_temperature', 'top_weather_code', 'map_avg_temp']
     for table in tables:
         backup_table = f"{table}_backup_{timestamp}"
         cur.execute(f"CREATE TABLE IF NOT EXISTS {backup_table} AS SELECT * FROM {table}")
@@ -91,51 +91,39 @@ def backup_tables():
 
 
 def create_tables():
-    """Create tables for weather data with version tracking"""
+    """Create tables for weather data analysis"""
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
 
     # Temperature Rankings table
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS temperature_rankings (
+    CREATE TABLE IF NOT EXISTS ranking_temperature (
         source_city VARCHAR(100),
         avg_temp NUMERIC(5,2),
-        max_temp NUMERIC(5,2),
-        min_temp NUMERIC(5,2),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (source_city)
-    )""")
-
-    # Wind Analysis table
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS wind_analysis (
-        source_city VARCHAR(100),
-        avg_windspeed NUMERIC(5,2),
-        max_windspeed NUMERIC(5,2),
-        median_direction INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (source_city)
-    )""")
-
-    # Day/Night Patterns table
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS day_night_patterns (
-        source_city VARCHAR(100),
-        is_day BOOLEAN,
-        avg_temp NUMERIC(5,2),
-        avg_windspeed NUMERIC(5,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (source_city, is_day)
     )""")
 
     # Weather Codes table
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS weather_codes (
+    CREATE TABLE IF NOT EXISTS top_weather_code (
         source_city VARCHAR(100),
         weathercode INTEGER,
-        frequency INTEGER,
+        freq INTEGER,
+        weather_description VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (source_city, weathercode)
+        PRIMARY KEY (source_city)
+    )""")
+
+    # Map Average Temperature table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS map_avg_temp (
+        source_city VARCHAR(100),
+        latitude NUMERIC(8,6),
+        longitude NUMERIC(8,6),
+        avg_temp NUMERIC(5,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_city)
     )""")
 
     conn.commit()
@@ -166,7 +154,7 @@ def load_data_to_postgres_batch(spark, parquet_dir, batch_size=10000):
         "batchsize": str(batch_size)
     }
 
-    for table in ['temperature_rankings', 'wind_analysis', 'day_night_patterns', 'weather_codes']:
+    for table in ['ranking_temperature', 'top_weather_code', 'map_avg_temp']:
         logger.info(f"Processing table: {table}")
 
         # Read Parquet
@@ -246,20 +234,22 @@ def main():
     logger.info("Starting PostgreSQL setup and data loading process")
 
     try:
-        # Backup existing tables
-        logger.info("Creating backup of existing tables")
-        backup_tables()
-
-        # Setup database and tables
-        logger.info("Creating database and tables")
+        logger.info("Creating database")
         create_database()
+
+
+        logger.info("Creating tables")
         create_tables()
 
-        # Initialize Spark and load data
+        logger.info("Creating backup of existing tables")
+        try:
+            backup_tables()
+        except psycopg2.OperationalError as e:
+            logger.warning("No existing tables to backup - continuing")
+
         logger.info("Initializing Spark session")
         spark = create_spark_session()
 
-        # Get parquet directory path
         parquet_dir = os.path.join(current_dir, "analysis_results")
 
         logger.info("Loading data to PostgreSQL")
