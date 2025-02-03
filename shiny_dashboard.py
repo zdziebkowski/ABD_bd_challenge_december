@@ -1,8 +1,7 @@
-from shiny.express import input, render, ui
+from shiny.express import render, ui
 from shinywidgets import render_plotly
 import plotly.express as px
 import folium
-from folium import plugins
 from utils.database_connection import load_data
 
 # Load data at startup

@@ -9,6 +9,7 @@ Core Technologies:
 - Python - Main programming language
 - Apache Spark - Big data processing engine
 - PostgreSQL - Relational database for data storage
+- Shiny for Python - Interactive dashboard for data visualization
 
 Python Libraries:
 - PySpark - Python API for Apache Spark
@@ -16,6 +17,8 @@ Python Libraries:
 - Typer - CLI interface creation
 - Logging - Built-in logging functionality
 - psycopg2 - PostgreSQL adapter for Python
+- plotly - Interactive charting for dashboards 
+- Folium - Map visualization
 
 Data Formats:
 - JSON - Raw data storage
@@ -34,19 +37,33 @@ Monitoring & Logging:
 
 ## Project Structure
 ```
-weather_data_pipeline/
-├── weather_fetcher/
-│   ├── fetchers/
-│   │   ├── current_fetcher.py
-│   │   └── historical_fetcher.py
-│   ├── utils/
-│   │   └── file_manager.py
+ABD_bd_challenge_december/
+├── analysis_results/
+│   ├── map_avg_temp/
+│   ├── ranking_temperature/
+│   ├── top_weather_code/
+├── data/
+├── fetchers/
+│   ├── current_fetcher.py
+│   ├── historical_fetcher.py
+├── lib/
+├── logs/
+├── parquet/
+├── utils/
+│   ├── __init__.py
 │   ├── config.py
-│   └── main.py
+│   ├── database_connection.py
+│   ├── db_config.py
+│   ├── file_manager.py
+├── fetch_weather.bat
 ├── json_to_parquet.py
-├── transform_data.py
 ├── postgres_setup.py
-└── db_config.py
+├── shiny_dashboard.py
+├── transform_data.py
+├── requirements.txt
+├── .gitignore
+├── README.md
+
 ```
 
 ## Features
@@ -75,12 +92,11 @@ weather_data_pipeline/
 - Includes automatic backup management
 - Handles data versioning and updates
 
-### 4. Analysis Features
-- Temperature analysis by city
-- Wind patterns and speed analysis
-- Day/night weather comparison
-- Weather code frequency analysis
-- Custom metrics and aggregations
+### 4. Data Visualization
+- Interactive **Shiny for Python** dashboard for real-time weather data analysis
+- **Plotly charts** for temperature ranking and weather code frequency
+- **Folium-based map** for visualizing city temperature distribution
+- Integrated data retrieval from PostgreSQL using `utils/database_connection.py`
 
 ## Installation
 
@@ -95,7 +111,7 @@ pip install -r requirements.txt
 ```
 
 3. Configure PostgreSQL:
-- Update db_config.py with your database credentials
+- Update `utils/db_config.py` with your database credentials
 - Ensure PostgreSQL is installed and running
 
 ## Usage
@@ -103,10 +119,10 @@ pip install -r requirements.txt
 ### Fetching Weather Data
 ```bash
 # Fetch current weather for all cities
-python -m weather_fetcher.main fetch-current-all --output-dir "data/current"
+python -m fetchers.current_fetcher --output-dir "data/current"
 
 # Fetch historical weather data
-python -m weather_fetcher.main fetch-historical --city "Warsaw" --start-date "2024-01-01" --end-date "2024-01-31"
+python -m fetchers.historical_fetcher --city "Warsaw" --start-date "2024-01-01" --end-date "2024-01-31" --output-dir "data/historical"
 ```
 
 ### Processing Data
@@ -121,26 +137,37 @@ python transform_data.py
 python postgres_setup.py
 ```
 
+### Running the Dashboard
+```bash
+# Start the interactive Shiny dashboard
+shiny run shiny_dashboard.py
+```
 ## Configuration
 
 ### Cities
-The project includes 26 predefined cities with their coordinates in `config.py`. Cities include:
+The project includes predefined cities with their coordinates in `utils/config.py`. Cities include:
 - Major Polish cities (Warsaw, Krakow, etc.)
 - Selected European locations
 - Custom locations can be added to the configuration
 
 ### Database
-Default database configuration in `db_config.py`:
+Default database configuration in `utils/db_config.py`:
 - Database name: weather_db
 - Default port: 5432
 - Configurable user credentials
+
+### Database Connection
+The database_connection.py module provides utility functions to fetch data directly from the PostgreSQL database. It retrieves:
+- City temperature rankings
+- Weather code frequency
+- Map data for visualizations
 
 ## Data Flow
 1. Raw weather data is fetched from the API (JSON format)
 2. Data is converted to Parquet format for efficient processing
 3. Spark transformations create analytical datasets
 4. Results are stored in PostgreSQL for analysis
-5. Data can be visualized using BI tools
+5. Data can be visualized using Shiny for Python
 
 ## Error Handling and Logging
 - Comprehensive logging system
