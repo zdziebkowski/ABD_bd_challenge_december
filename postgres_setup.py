@@ -5,7 +5,7 @@ from datetime import datetime
 from pyspark.sql import SparkSession
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from db_config import DB_CONFIG
+from utils.db_config import DB_CONFIG
 
 
 def setup_logging(logs_dir):

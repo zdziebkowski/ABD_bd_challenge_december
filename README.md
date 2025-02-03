@@ -37,22 +37,33 @@ Monitoring & Logging:
 
 ## Project Structure
 ```
-weather_data_pipeline/
-├── weather_fetcher/
-│   ├── fetchers/
-│   │   ├── current_fetcher.py
-│   │   └── historical_fetcher.py
-│   ├── utils/
-│   │   └── file_manager.py
+ABD_bd_challenge_december/
+├── analysis_results/
+│   ├── map_avg_temp/
+│   ├── ranking_temperature/
+│   ├── top_weather_code/
+├── data/
+├── fetchers/
+│   ├── current_fetcher.py
+│   ├── historical_fetcher.py
+├── lib/
+├── logs/
+├── parquet/
+├── utils/
+│   ├── __init__.py
 │   ├── config.py
-│   └── main.py
+│   ├── database_connection.py
+│   ├── db_config.py
+│   ├── file_manager.py
+├── fetch_weather.bat
 ├── json_to_parquet.py
-├── transform_data.py
 ├── postgres_setup.py
-├── db_config.py
 ├── shiny_dashboard.py
-├── database_connection.py
-└── README.md
+├── transform_data.py
+├── requirements.txt
+├── .gitignore
+├── README.md
+
 ```
 
 ## Features
@@ -82,10 +93,10 @@ weather_data_pipeline/
 - Handles data versioning and updates
 
 ### 4. Data Visualization
-- Interactive Shiny for Python dashboard for real-time weather data analysis
-- Plotly charts for temperature ranking and weather code frequency
-- Folium-based map for visualizing city temperature distribution
-- Integrated data retrieval from PostgreSQL using database_connection.py
+- Interactive **Shiny for Python** dashboard for real-time weather data analysis
+- **Plotly charts** for temperature ranking and weather code frequency
+- **Folium-based map** for visualizing city temperature distribution
+- Integrated data retrieval from PostgreSQL using `utils/database_connection.py`
 
 ## Installation
 
@@ -100,7 +111,7 @@ pip install -r requirements.txt
 ```
 
 3. Configure PostgreSQL:
-- Update db_config.py with your database credentials
+- Update `utils/db_config.py` with your database credentials
 - Ensure PostgreSQL is installed and running
 
 ## Usage
@@ -108,10 +119,10 @@ pip install -r requirements.txt
 ### Fetching Weather Data
 ```bash
 # Fetch current weather for all cities
-python -m weather_fetcher.main fetch-current-all --output-dir "data/current"
+python -m fetchers.current_fetcher --output-dir "data/current"
 
 # Fetch historical weather data
-python -m weather_fetcher.main fetch-historical --city "Warsaw" --start-date "2024-01-01" --end-date "2024-01-31"
+python -m fetchers.historical_fetcher --city "Warsaw" --start-date "2024-01-01" --end-date "2024-01-31" --output-dir "data/historical"
 ```
 
 ### Processing Data
@@ -134,13 +145,13 @@ shiny run shiny_dashboard.py
 ## Configuration
 
 ### Cities
-The project includes 26 predefined cities with their coordinates in `config.py`. Cities include:
+The project includes predefined cities with their coordinates in `utils/config.py`. Cities include:
 - Major Polish cities (Warsaw, Krakow, etc.)
 - Selected European locations
 - Custom locations can be added to the configuration
 
 ### Database
-Default database configuration in `db_config.py`:
+Default database configuration in `utils/db_config.py`:
 - Database name: weather_db
 - Default port: 5432
 - Configurable user credentials

@@ -33,7 +33,7 @@ build/
 .DS_Store
 Thumbs.db
 /parquet/
-/db_config.py
+/utils/db_config.py
 /lib/
 /archive/
 /analysis_results/map_avg_temp/

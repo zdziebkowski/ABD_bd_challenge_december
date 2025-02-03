@@ -1,14 +1,6 @@
 import pandas as pd
 import psycopg2
-import os
-import sys
-
-# Dodajemy ścieżkę do katalogu nadrzędnego
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
-
-from db_config import DB_CONFIG
+from utils.db_config import DB_CONFIG
 
 
 def get_db_connection():
