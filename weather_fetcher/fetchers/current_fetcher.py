@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 import requests
-from weather_fetcher.config import CITIES
+from config import CITIES
 
 
 def get_city_coordinates(city_name: str) -> tuple[float, float]:

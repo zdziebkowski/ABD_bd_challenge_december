@@ -8,12 +8,12 @@ __pycache__/
 *$py.class
 
 # Project specific
-weather_fetcher/logs/*
-!weather_fetcher/logs/.gitkeep
-weather_fetcher/data/*
-!weather_fetcher/data/.gitkeep
-!weather_fetcher/data/current/.gitkeep
-!weather_fetcher/data/historical/.gitkeep
+logs/*
+!logs/.gitkeep
+data/*
+!data/.gitkeep
+!data/current/.gitkeep
+!data/historical/.gitkeep
 
 # IDE and Editor files
 .vscode/
@@ -32,6 +32,10 @@ build/
 # System files
 .DS_Store
 Thumbs.db
-/weather_fetcher/parquet/
-/weather_fetcher/db_config.py
-/weather_fetcher/lib/
+/parquet/
+/db_config.py
+/lib/
+/archive/
+/analysis_results/map_avg_temp/
+/analysis_results/ranking_temperature/
+/analysis_results/top_weather_code/

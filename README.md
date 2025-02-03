@@ -9,6 +9,7 @@ Core Technologies:
 - Python - Main programming language
 - Apache Spark - Big data processing engine
 - PostgreSQL - Relational database for data storage
+- Shiny for Python - Interactive dashboard for data visualization
 
 Python Libraries:
 - PySpark - Python API for Apache Spark
@@ -16,6 +17,8 @@ Python Libraries:
 - Typer - CLI interface creation
 - Logging - Built-in logging functionality
 - psycopg2 - PostgreSQL adapter for Python
+- plotly - Interactive charting for dashboards 
+- Folium - Map visualization
 
 Data Formats:
 - JSON - Raw data storage
@@ -46,7 +49,10 @@ weather_data_pipeline/
 ├── json_to_parquet.py
 ├── transform_data.py
 ├── postgres_setup.py
-└── db_config.py
+├── db_config.py
+├── shiny_dashboard.py
+├── database_connection.py
+└── README.md
 ```
 
 ## Features
@@ -75,12 +81,11 @@ weather_data_pipeline/
 - Includes automatic backup management
 - Handles data versioning and updates
 
-### 4. Analysis Features
-- Temperature analysis by city
-- Wind patterns and speed analysis
-- Day/night weather comparison
-- Weather code frequency analysis
-- Custom metrics and aggregations
+### 4. Data Visualization
+- Interactive Shiny for Python dashboard for real-time weather data analysis
+- Plotly charts for temperature ranking and weather code frequency
+- Folium-based map for visualizing city temperature distribution
+- Integrated data retrieval from PostgreSQL using database_connection.py
 
 ## Installation
 
@@ -121,6 +126,11 @@ python transform_data.py
 python postgres_setup.py
 ```
 
+### Running the Dashboard
+```bash
+# Start the interactive Shiny dashboard
+shiny run shiny_dashboard.py
+```
 ## Configuration
 
 ### Cities
@@ -135,12 +145,18 @@ Default database configuration in `db_config.py`:
 - Default port: 5432
 - Configurable user credentials
 
+### Database Connection
+The database_connection.py module provides utility functions to fetch data directly from the PostgreSQL database. It retrieves:
+- City temperature rankings
+- Weather code frequency
+- Map data for visualizations
+
 ## Data Flow
 1. Raw weather data is fetched from the API (JSON format)
 2. Data is converted to Parquet format for efficient processing
 3. Spark transformations create analytical datasets
 4. Results are stored in PostgreSQL for analysis
-5. Data can be visualized using BI tools
+5. Data can be visualized using Shiny for Python
 
 ## Error Handling and Logging
 - Comprehensive logging system

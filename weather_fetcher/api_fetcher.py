@@ -6,10 +6,10 @@ import os
 from datetime import datetime
 from weather_fetcher.fetchers.current_fetcher import fetch_current_weather, fetch_weather_for_all_cities
 from weather_fetcher.fetchers.historical_fetcher import fetch_historical_weather, fetch_historical_weather_for_all_cities
-from weather_fetcher.utils.file_manager import save_data_to_file, save_city_weather_data
+from utils.file_manager import save_data_to_file, save_city_weather_data
 
 # Configure logging
-log_directory = os.path.join("weather_fetcher", "logs")
+log_directory = os.path.join("", "logs")
 os.makedirs(log_directory, exist_ok=True)
 log_file = os.path.join(log_directory, f"weather_fetch_{datetime.now().strftime('%Y%m%d_%H%M')}.log")
 
