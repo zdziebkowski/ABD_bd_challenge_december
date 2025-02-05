@@ -1,2 +1,11 @@
-requests
-typer
+folium==0.19.4
+numpy==2.0.2
+pandas==2.2.3
+plotly==6.0.0
+psycopg2==2.9.10
+pyspark==3.5.4
+requests==2.32.3
+rsconnect_python==1.25.1
+shiny==1.2.1
+shinywidgets==0.5.1
+typer==0.15.1

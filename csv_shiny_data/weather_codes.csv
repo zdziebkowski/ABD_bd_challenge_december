@@ -1,0 +1,27 @@
+source_city,weathercode,freq,weather_description
+Lodz,3,9,Overcast
+Krakow,3,8,Overcast
+Rzeszow,3,8,Overcast
+Gorzow Wielkopolski,3,7,Overcast
+Lublin,3,7,Overcast
+Krosno,3,7,Overcast
+Grudziadz,3,7,Overcast
+Tarnow,3,7,Overcast
+Czestochowa,3,7,Overcast
+Zielona Gora,3,6,Overcast
+Torun,3,6,Overcast
+Warsaw,3,6,Overcast
+Bydgoszcz,3,5,Overcast
+Gdansk,3,5,Overcast
+Landshut,45,5,Fog
+Swietochlowice,3,5,Overcast
+Poznan,3,4,Overcast
+Leszno,3,4,Overcast
+Gniezno,3,4,Overcast
+Wroclaw,45,4,Fog
+Pila,3,4,Overcast
+Opole,3,3,Overcast
+Rawicz,45,3,Fog
+Rybnik,1,3,Mainly Clear
+Ostrow Wielkopolski,45,3,Fog
+Daugavpils,3,3,Overcast
