@@ -3,6 +3,9 @@
 ## Overview
 This project implements a complete ETL (Extract, Transform, Load) pipeline for weather data processing. It fetches weather data from the Open-Meteo API for multiple cities, processes it through various stages, and ultimately presents it in a format suitable for analysis and visualization.
 
+## Visualization
+Visualization available on [shinyapps.io](https://zdziebkowski.shinyapps.io/big_data_challenge_app/.)
+
 ## Tools and Technologies
 
 Core Technologies:
@@ -140,7 +143,7 @@ python postgres_setup.py
 ### Running the Dashboard
 ```bash
 # Start the interactive Shiny dashboard
-shiny run shiny_dashboard.py
+shiny run app.py
 ```
 ## Configuration
 
